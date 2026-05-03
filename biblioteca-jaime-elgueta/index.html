@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>La Biblioteca de Jaime Elgueta</title>
+<style>
+  :root {
+    --bg: #1a120b;
+    --panel: #2b1d12;
+    --panel-2: #3a2718;
+    --ink: #f3e9d2;
+    --ink-dim: #c9b89a;
+    --accent: #d4a256;
+    --accent-2: #b8722f;
+    --danger: #c45a3b;
+    --shadow: 0 4px 14px rgba(0,0,0,.45);
+    --radius: 10px;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 600px at 20% -10%, #4a2f1c 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #3a2417 0%, transparent 55%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 24px 12px;
+    border-bottom: 1px solid #4a3422;
+    background: linear-gradient(180deg, rgba(0,0,0,.18), transparent);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    margin: 0 0 4px;
+    font-size: clamp(26px, 4vw, 40px);
+    letter-spacing: .3px;
+  }
+  h1 .accent { color: var(--accent); }
+  .subtitle { color: var(--ink-dim); font-size: 14px; margin: 0; }
+
+  main { padding: 18px 24px 60px; max-width: 1300px; margin: 0 auto; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 16px 0 22px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid #4a3422;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+  }
+  .stat .num { font-family: var(--serif); font-size: 26px; color: var(--accent); }
+  .stat .lbl { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 820px) {
+    .toolbar { grid-template-columns: 1fr 1fr; }
+  }
+  input[type="text"], input[type="file"], select, button {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid #4a3422;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  input[type="text"]::placeholder { color: #8a7657; }
+  input[type="text"]:focus, select:focus { border-color: var(--accent); }
+  button {
+    cursor: pointer;
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    color: #1a120b;
+    font-weight: 600;
+  }
+  button:hover { background: var(--accent); border-color: var(--accent); }
+  button.ghost { background: transparent; color: var(--ink); border-color: #4a3422; font-weight: 500; }
+  button.ghost:hover { background: var(--panel-2); }
+
+  .group-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;
+  }
+  .chip {
+    padding: 6px 10px;
+    background: var(--panel);
+    border: 1px solid #4a3422;
+    border-radius: 999px;
+    font-size: 12px; color: var(--ink-dim);
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.label { cursor: default; color: var(--ink); }
+  .chip.active { background: var(--accent); color: #1a120b; border-color: var(--accent); }
+
+  .results-meta { color: var(--ink-dim); font-size: 13px; margin: 6px 2px 10px; }
+
+  /* Card grid (default) */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid #4a3422;
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .card .cover {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background:
+      linear-gradient(135deg, #4a2f1c 0%, #2b1d12 60%, #3a2718 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    font-family: var(--serif);
+    text-align: center;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.25;
+    overflow: hidden;
+  }
+  .card .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .body { padding: 10px 12px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .card .titulo { font-family: var(--serif); font-size: 15px; line-height: 1.2; }
+  .card .autor { color: var(--ink-dim); font-size: 13px; }
+  .card .meta { color: var(--ink-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .card .actions {
+    display: flex; gap: 6px; padding: 0 12px 12px;
+  }
+  .card .actions button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid #4a3422;
+    font-weight: 500;
+  }
+  .card .actions button:hover { background: var(--panel-2); }
+  .card .actions button.del { color: var(--danger); }
+  .card .actions button.del:hover { background: rgba(196,90,59,.15); }
+
+  /* Group view (by autor / genero) */
+  .group {
+    background: var(--panel);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .group h3 {
+    margin: 0;
+    padding: 12px 16px;
+    background: var(--panel-2);
+    color: var(--accent);
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 17px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .group h3 small { color: var(--ink-dim); font-size: 12px; font-weight: 400; font-family: var(--sans); }
+  .group ul { list-style: none; padding: 4px 0; margin: 0; }
+  .group li {
+    padding: 8px 16px;
+    border-top: 1px solid #3a2718;
+    display: flex; gap: 12px; align-items: center;
+    font-size: 14px;
+  }
+  .group li:first-child { border-top: none; }
+  .group li .thumb {
+    width: 36px; height: 54px;
+    background: var(--panel-2);
+    border-radius: 4px;
+    flex-shrink: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-size: 9px; font-family: var(--serif); text-align: center; padding: 2px;
+  }
+  .group li .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .group li .info { flex: 1; min-width: 0; }
+  .group li .info .t { font-family: var(--serif); }
+  .group li .meta { color: var(--ink-dim); font-size: 12px; white-space: nowrap; }
+
+  /* Add modal */
+  dialog {
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid #4a3422;
+    border-radius: var(--radius);
+    padding: 20px;
+    max-width: 480px; width: 90%;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 12px; font-family: var(--serif); color: var(--accent); }
+  dialog form { display: grid; gap: 10px; }
+  dialog .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+  dialog .preview {
+    width: 80px; height: 120px; border: 1px dashed #4a3422; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-dim); font-size: 11px; text-align: center; padding: 4px;
+    overflow: hidden;
+  }
+  dialog .preview img { width: 100%; height: 100%; object-fit: cover; }
+  dialog .imgline { display: flex; gap: 12px; align-items: center; }
+  dialog .imgline > div:last-child { flex: 1; display: grid; gap: 6px; }
+  .field-label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+  footer { margin-top: 28px; color: var(--ink-dim); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>La Biblioteca de <span class="accent">Jaime Elgueta</span></h1>
+  <p class="subtitle">Catálogo personal indexado por título, autor, género e idioma — con portadas opcionales.</p>
+</header>
+
+<main>
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <input type="text" id="q" placeholder="Buscar por título o autor…" />
+    <select id="genero"><option value="">Todos los géneros</option></select>
+    <select id="autor"><option value="">Todos los autores</option></select>
+    <select id="idioma"><option value="">Todos los idiomas</option></select>
+    <button id="addBtn">+ Añadir libro</button>
+  </div>
+
+  <div class="group-bar">
+    <span class="chip label">Vista:</span>
+    <span class="chip active" data-view="cards">Cuadrícula</span>
+    <span class="chip" data-view="autor">Por autor</span>
+    <span class="chip" data-view="genero">Por género</span>
+    <span class="chip" data-view="idioma">Por idioma</span>
+    <span style="flex:1"></span>
+    <button class="ghost" id="exportBtn">Exportar JSON</button>
+    <button class="ghost" id="resetBtn">Restaurar catálogo</button>
+  </div>
+
+  <div class="results-meta" id="meta"></div>
+
+  <div id="content"></div>
+
+  <footer>
+    Catálogo construido a partir de fotografías de la biblioteca. Tus añadidos, portadas y cambios se guardan localmente en este navegador.
+  </footer>
+</main>
+
+<dialog id="dlg">
+  <h2 id="dlgTitle">Añadir libro</h2>
+  <form id="addForm">
+    <input type="hidden" name="id" />
+    <div>
+      <div class="field-label">Título</div>
+      <input type="text" name="titulo" placeholder="Ej: Cien años de soledad" required />
+    </div>
+    <div>
+      <div class="field-label">Autor</div>
+      <input type="text" name="autor" placeholder="Ej: Gabriel García Márquez" required />
+    </div>
+    <div>
+      <div class="field-label">Género</div>
+      <input type="text" name="genero" placeholder="Ej: Ficción literaria, Historia, Poesía…" />
+    </div>
+    <div>
+      <div class="field-label">Idioma</div>
+      <select name="idioma">
+        <option value="Español">Español</option>
+        <option value="Inglés">Inglés</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div>
+      <div class="field-label">Portada (opcional)</div>
+      <div class="imgline">
+        <div class="preview" id="preview">Sin imagen</div>
+        <div>
+          <input type="file" id="imageFile" accept="image/*" />
+          <button type="button" class="ghost" id="clearImg">Quitar imagen</button>
+        </div>
+      </div>
+    </div>
+    <input type="hidden" name="imagen" id="imagenInput" />
+    <div class="row">
+      <button type="button" class="ghost" id="cancelBtn">Cancelar</button>
+      <button type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="application/json" id="seed-data">
+[{"titulo":"Persona non grata","autor":"Jorge Edwards","genero":"Memorias / Política","idioma":"Español"},{"titulo":"Home Fire","autor":"Kamila Shamsie","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Dispossessed","autor":"Ursula K. Le Guin","genero":"Ciencia ficción","idioma":"Inglés"},{"titulo":"The Found and the Lost","autor":"Ursula K. Le Guin","genero":"Ciencia ficción / Cuentos","idioma":"Inglés"},{"titulo":"Circe","autor":"Madeline Miller","genero":"Ficción mitológica","idioma":"Inglés"},{"titulo":"The Promise","autor":"Damon Galgut","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"By the Sea","autor":"Abdulrazak Gurnah","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Cursed Bunny","autor":"Bora Chung","genero":"Cuentos / Horror","idioma":"Inglés"},{"titulo":"Gene Eating","autor":"Giles Yeo","genero":"Ciencia / Nutrición","idioma":"Inglés"},{"titulo":"Life Time","autor":"Russell Foster","genero":"Ciencia / Salud","idioma":"Inglés"},{"titulo":"Barbarian Days: A Surfing Life","autor":"William Finnegan","genero":"Memorias","idioma":"Inglés"},{"titulo":"A Problem from Hell","autor":"Samantha Power","genero":"Historia / Política","idioma":"Inglés"},{"titulo":"The Circadian Code","autor":"Satchin Panda","genero":"Ciencia / Salud","idioma":"Inglés"},{"titulo":"Sapiens","autor":"Yuval Noah Harari","genero":"Historia / Antropología","idioma":"Inglés"},{"titulo":"Dominion","autor":"Tom Holland","genero":"Historia / Religión","idioma":"Inglés"},{"titulo":"Know My Name","autor":"Chanel Miller","genero":"Memorias","idioma":"Inglés"},{"titulo":"The Good Lord Bird","autor":"James McBride","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Breasts and Eggs","autor":"Mieko Kawakami","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Small Mercies","autor":"Dennis Lehane","genero":"Thriller","idioma":"Inglés"},{"titulo":"Vivo o muerto","autor":"Tom Clancy","genero":"Thriller / Suspenso","idioma":"Español"},{"titulo":"Caesar","autor":"Adrian Goldsworthy","genero":"Biografía / Historia","idioma":"Inglés"},{"titulo":"The English and Their History","autor":"Robert Tombs","genero":"Historia","idioma":"Inglés"},{"titulo":"Diarios I (1995-2001)","autor":"Ricardo Piglia","genero":"Diarios / Ensayo","idioma":"Español"},{"titulo":"Diarios II (2002-2015)","autor":"Ricardo Piglia","genero":"Diarios / Ensayo","idioma":"Español"},{"titulo":"The Story of Christianity","autor":"Justo L. González","genero":"Historia / Religión","idioma":"Inglés"},{"titulo":"The Tyranny of Merit","autor":"Michael J. Sandel","genero":"Filosofía / Política","idioma":"Inglés"},{"titulo":"The Birds and Other Stories","autor":"Daphne du Maurier","genero":"Cuentos / Suspenso","idioma":"Inglés"},{"titulo":"The Bluest Eye","autor":"Toni Morrison","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"True History of the Kelly Gang","autor":"Peter Carey","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"On the Road","autor":"Jack Kerouac","genero":"Ficción / Beat","idioma":"Inglés"},{"titulo":"Las cosas que perdimos en el fuego","autor":"Mariana Enriquez","genero":"Cuentos / Horror","idioma":"Español"},{"titulo":"James","autor":"Percival Everett","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Martyr!","autor":"Kaveh Akbar","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Old God's Time","autor":"Sebastian Barry","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Liberation Day","autor":"George Saunders","genero":"Cuentos","idioma":"Inglés"},{"titulo":"Nos vemos allá arriba","autor":"Pierre Lemaitre","genero":"Ficción histórica","idioma":"Español"},{"titulo":"Rationality","autor":"Steven Pinker","genero":"Ensayo / Ciencia","idioma":"Inglés"},{"titulo":"How to Live: A Life of Montaigne","autor":"Sarah Bakewell","genero":"Biografía / Filosofía","idioma":"Inglés"},{"titulo":"War: How Conflict Shaped Us","autor":"Margaret MacMillan","genero":"Historia","idioma":"Inglés"},{"titulo":"Diálogos (vol. I)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. II)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. III)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. IV)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. V)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. VI)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. VII)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Política","autor":"Aristóteles","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Retórica","autor":"Aristóteles","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Ética a Nicómaco","autor":"Aristóteles","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Tratados de Lógica (Órganon)","autor":"Aristóteles","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Los filósofos presocráticos","autor":"Varios","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Obras (Homero)","autor":"Homero","genero":"Clásico","idioma":"Español"},{"titulo":"The Nickel Boys","autor":"Colson Whitehead","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Lottery and Other Stories","autor":"Shirley Jackson","genero":"Cuentos / Horror","idioma":"Inglés"},{"titulo":"Anxious People","autor":"Fredrik Backman","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"El infinito en un junco","autor":"Irene Vallejo","genero":"Ensayo / Historia","idioma":"Español"},{"titulo":"It","autor":"Stephen King","genero":"Horror","idioma":"Inglés"},{"titulo":"The North Water","autor":"Ian McGuire","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Cuentos completos","autor":"Julio Cortázar","genero":"Cuentos / Clásico","idioma":"Español"},{"titulo":"La república era esto","autor":"J.M. Caballero Bonald","genero":"Memorias","idioma":"Español"},{"titulo":"Examen de ingenios","autor":"J.M. Caballero Bonald","genero":"Ensayo","idioma":"Español"},{"titulo":"A Clockwork Orange","autor":"Anthony Burgess","genero":"Ficción / Distopía","idioma":"Inglés"},{"titulo":"A History of the Jews","autor":"Paul Johnson","genero":"Historia","idioma":"Inglés"},{"titulo":"The Vanishing Half","autor":"Brit Bennett","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"How the Word Is Passed","autor":"Clint Smith","genero":"Historia / Ensayo","idioma":"Inglés"},{"titulo":"Nexus","autor":"Yuval Noah Harari","genero":"Historia / Ensayo","idioma":"Inglés"},{"titulo":"Faust","autor":"Johann Wolfgang von Goethe","genero":"Drama / Clásico","idioma":"Inglés"},{"titulo":"Husserl","autor":"Edmund Husserl","genero":"Filosofía","idioma":"Español"},{"titulo":"Dune","autor":"Frank Herbert","genero":"Ciencia ficción","idioma":"Inglés"},{"titulo":"Hamnet","autor":"Maggie O'Farrell","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"The War That Ended Peace","autor":"Margaret MacMillan","genero":"Historia","idioma":"Inglés"},{"titulo":"The Complete Novels of James Joyce","autor":"James Joyce","genero":"Ficción literaria / Clásico","idioma":"Inglés"},{"titulo":"Jamaica Inn","autor":"Daphne du Maurier","genero":"Ficción / Suspenso","idioma":"Inglés"},{"titulo":"Tender Is the Night","autor":"F. Scott Fitzgerald","genero":"Ficción / Clásico","idioma":"Inglés"},{"titulo":"The Midnight Library","autor":"Matt Haig","genero":"Ficción / Fantasía","idioma":"Inglés"},{"titulo":"On Beauty","autor":"Zadie Smith","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Tiger's Wife","autor":"Téa Obreht","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Apollo's Angels","autor":"Jennifer Homans","genero":"Historia / Arte","idioma":"Inglés"},{"titulo":"Noise","autor":"Daniel Kahneman","genero":"Psicología / Ensayo","idioma":"Inglés"},{"titulo":"Solar Bones","autor":"Mike McCormack","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Atlas Shrugged","autor":"Ayn Rand","genero":"Ficción / Filosofía","idioma":"Inglés"},{"titulo":"Just Kids","autor":"Patti Smith","genero":"Memorias","idioma":"Inglés"},{"titulo":"The Return","autor":"Hisham Matar","genero":"Memorias","idioma":"Inglés"},{"titulo":"Call Me By Your Name","autor":"André Aciman","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Sweetness of Water","autor":"Nathan Harris","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Cuba: An American History","autor":"Ada Ferrer","genero":"Historia","idioma":"Inglés"},{"titulo":"Cuentos completos (Poe)","autor":"Edgar Allan Poe","genero":"Cuentos / Horror / Clásico","idioma":"Español"},{"titulo":"Charles Bukowski (Antología)","autor":"Charles Bukowski","genero":"Poesía / Ficción","idioma":"Inglés"},{"titulo":"Trilogía de la Ocupación","autor":"Patrick Modiano","genero":"Ficción literaria","idioma":"Español"},{"titulo":"La revolución inconclusa","autor":"I.M. Caballero Bonald","genero":"Ensayo / Política","idioma":"Español"},{"titulo":"Persianas metálicas bajan de golpe","autor":"Marina Closs","genero":"Cuentos","idioma":"Español"},{"titulo":"How to Be Both","autor":"Ali Smith","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"El Cementerio de Praga","autor":"Umberto Eco","genero":"Ficción histórica","idioma":"Español"},{"titulo":"Aftermath","autor":"Rachel Cusk","genero":"Memorias / Ensayo","idioma":"Inglés"},{"titulo":"Bewilderment","autor":"Richard Powers","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Bliss","autor":"Peter Carey","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Hijos de la fábula","autor":"Fernando Aramburu","genero":"Ficción literaria","idioma":"Español"},{"titulo":"The Glorious Heresies","autor":"Lisa McInerney","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Roddy Doyle (novela)","autor":"Roddy Doyle","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"North Woods","autor":"Daniel Mason","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Washington Black","autor":"Esi Edugyan","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Once Upon a River","autor":"Diane Setterfield","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Fifth Season","autor":"N.K. Jemisin","genero":"Fantasía","idioma":"Inglés"},{"titulo":"Robertson Davies (novela)","autor":"Robertson Davies","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Gone with the Wind","autor":"Margaret Mitchell","genero":"Ficción histórica / Clásico","idioma":"Inglés"},{"titulo":"The Maniac","autor":"Benjamín Labatut","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Bee Sting","autor":"Paul Murray","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Stay With Me","autor":"Ayobami Adebayo","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"A Brief History of Seven Killings","autor":"Marlon James","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Americanah","autor":"Chimamanda Ngozi Adichie","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Swerve","autor":"Stephen Greenblatt","genero":"Historia","idioma":"Inglés"},{"titulo":"The Reformation","autor":"Diarmaid MacCulloch","genero":"Historia / Religión","idioma":"Inglés"},{"titulo":"Diálogos (vol. 24)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 25)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 26)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 27)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 28)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 29)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 30)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 31)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Diálogos (vol. 32)","autor":"Platón","genero":"Filosofía / Clásico","idioma":"Español"},{"titulo":"Divina Comedia: Inferno","autor":"Dante Alighieri","genero":"Poesía / Clásico","idioma":"Inglés"},{"titulo":"Divina Comedia: Purgatorio","autor":"Dante Alighieri","genero":"Poesía / Clásico","idioma":"Inglés"},{"titulo":"Divina Comedia: Paradiso","autor":"Dante Alighieri","genero":"Poesía / Clásico","idioma":"Inglés"},{"titulo":"The Grass Is Singing","autor":"Doris Lessing","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Tess of the d'Urbervilles","autor":"Thomas Hardy","genero":"Ficción / Clásico","idioma":"Inglés"},{"titulo":"Un día en la vida de Iván Denísovich","autor":"Aleksandr Solzhenitsyn","genero":"Ficción literaria / Clásico","idioma":"Español"},{"titulo":"Nothing to See Here","autor":"Kevin Wilson","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Blue Nights","autor":"Joan Didion","genero":"Memorias / Ensayo","idioma":"Inglés"},{"titulo":"The Wasp Factory","autor":"Iain Banks","genero":"Ficción / Suspenso","idioma":"Inglés"},{"titulo":"El mago del Kremlin","autor":"Giuliano da Empoli","genero":"Ficción política","idioma":"Español"},{"titulo":"El enigma de la habitación 622","autor":"Joël Dicker","genero":"Thriller / Misterio","idioma":"Español"},{"titulo":"Presidents (encyclopedia)","autor":"Varios","genero":"Referencia / Historia","idioma":"Inglés"},{"titulo":"Enciclopedia Monitor (set)","autor":"Salvat","genero":"Referencia / Enciclopedia","idioma":"Español"},{"titulo":"The Slap","autor":"Christos Tsiolkas","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Shadow King","autor":"Maaza Mengiste","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Daughter of Fortune (Margaret Atwood)","autor":"Margaret Atwood","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Husband's Secret","autor":"Liane Moriarty","genero":"Misterio / Suspenso","idioma":"Inglés"},{"titulo":"Veinte poemas de amor y una canción desesperada","autor":"Pablo Neruda","genero":"Poesía / Clásico","idioma":"Español"},{"titulo":"Maus","autor":"Art Spiegelman","genero":"Novela gráfica / Historia","idioma":"Inglés"},{"titulo":"Cien años de soledad","autor":"Gabriel García Márquez","genero":"Realismo mágico / Clásico","idioma":"Español"},{"titulo":"Lenin's Tomb","autor":"David Remnick","genero":"Historia / Periodismo","idioma":"Inglés"},{"titulo":"Slaughterhouse-Five","autor":"Kurt Vonnegut","genero":"Ficción / Sátira","idioma":"Inglés"},{"titulo":"The Books of Jacob","autor":"Olga Tokarczuk","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"The Empusium","autor":"Olga Tokarczuk","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Magicians","autor":"Lev Grossman","genero":"Fantasía","idioma":"Inglés"},{"titulo":"How Beautiful We Were","autor":"Imbolo Mbue","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Misery","autor":"Stephen King","genero":"Horror / Suspenso","idioma":"Inglés"},{"titulo":"Cormac McCarthy (novela)","autor":"Cormac McCarthy","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"The Island of Missing Trees","autor":"Elif Shafak","genero":"Ficción literaria","idioma":"Inglés"},{"titulo":"Rayuela","autor":"Julio Cortázar","genero":"Ficción literaria / Clásico","idioma":"Español"},{"titulo":"Generation Why","autor":"Zadie Smith","genero":"Ensayo","idioma":"Inglés"},{"titulo":"Jung: A Biography","autor":"Deirdre Bair","genero":"Biografía / Psicología","idioma":"Español"},{"titulo":"El bebé feroz","autor":"Mariana Enríquez","genero":"Cuentos / Horror","idioma":"Español"},{"titulo":"Pat Barker (Regeneration)","autor":"Pat Barker","genero":"Ficción histórica","idioma":"Inglés"},{"titulo":"Susan Faludi","autor":"Susan Faludi","genero":"Ensayo / Feminismo","idioma":"Inglés"},{"titulo":"The Color Purple","autor":"Alice Walker","genero":"Ficción literaria / Clásico","idioma":"Inglés"},{"titulo":"Gone Girl","autor":"Gillian Flynn","genero":"Thriller","idioma":"Inglés"},{"titulo":"Amor Towles (novela)","autor":"Amor Towles","genero":"Ficción literaria","idioma":"Inglés"}]
+</script>
+
+<script>
+const STORAGE_KEY = "biblioteca-jaime-elgueta-v2";
+const SEED_RAW = JSON.parse(document.getElementById("seed-data").textContent);
+const SEED = SEED_RAW.map((b, i) => ({ id: "seed-" + i, ...b, imagen: "" }));
+
+function loadBooks() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try { return JSON.parse(saved); } catch (e) {}
+  }
+  return SEED.slice();
+}
+function saveBooks(b) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(b)); }
+  catch (e) {
+    alert("No se pudo guardar — el navegador tiene poco espacio. Considera quitar imágenes muy grandes o exportar a JSON.");
+  }
+}
+
+let books = loadBooks();
+let state = { q: "", genero: "", autor: "", idioma: "", view: "cards" };
+
+const $ = (s) => document.querySelector(s);
+const norm = (s) => (s || "").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const uid = () => "b-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+
+function unique(field) {
+  return [...new Set(books.map(b => b[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
+}
+function fillSelect(id, values) {
+  const el = $(id);
+  const current = el.value;
+  const first = el.querySelector("option").outerHTML;
+  el.innerHTML = first + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+  el.value = current;
+}
+function escapeHtml(s) {
+  return (s||"").toString().replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+function applyFilters() {
+  const q = norm(state.q);
+  return books.filter(b => {
+    if (state.genero && b.genero !== state.genero) return false;
+    if (state.autor && b.autor !== state.autor) return false;
+    if (state.idioma && b.idioma !== state.idioma) return false;
+    if (q) {
+      const hay = norm(b.titulo) + " " + norm(b.autor) + " " + norm(b.genero);
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderStats() {
+  const total = books.length;
+  const autores = new Set(books.map(b => b.autor)).size;
+  const generos = new Set(books.map(b => b.genero)).size;
+  const idiomas = new Set(books.map(b => b.idioma)).size;
+  const conPortada = books.filter(b => b.imagen).length;
+  $("#stats").innerHTML = [
+    ["Libros", total],
+    ["Autores", autores],
+    ["Géneros", generos],
+    ["Idiomas", idiomas],
+    ["Con portada", conPortada],
+  ].map(([l,n]) => `<div class="stat"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
+}
+
+function coverHtml(b) {
+  if (b.imagen) return `<img src="${escapeHtml(b.imagen)}" alt="${escapeHtml(b.titulo)}" />`;
+  return `<span>${escapeHtml(b.titulo)}</span>`;
+}
+function thumbHtml(b) {
+  if (b.imagen) return `<img src="${escapeHtml(b.imagen)}" alt="" />`;
+  return `<span>${escapeHtml((b.titulo||"").slice(0,18))}</span>`;
+}
+
+function renderCardsView(rows) {
+  if (!rows.length) return `<div class="results-meta">Sin resultados.</div>`;
+  rows = rows.slice().sort((a,b)=>a.titulo.localeCompare(b.titulo,"es"));
+  return `<div class="cards">${rows.map(b => `
+    <div class="card">
+      <div class="cover">${coverHtml(b)}</div>
+      <div class="body">
+        <div class="titulo">${escapeHtml(b.titulo)}</div>
+        <div class="autor">${escapeHtml(b.autor)}</div>
+        <div class="meta">${escapeHtml(b.genero||"—")}${b.idioma?" · "+escapeHtml(b.idioma):""}</div>
+      </div>
+      <div class="actions">
+        <button data-edit="${escapeHtml(b.id)}">Editar</button>
+        <button class="del" data-del="${escapeHtml(b.id)}">Quitar</button>
+      </div>
+    </div>
+  `).join("")}</div>`;
+}
+
+function renderGroupedView(rows, key) {
+  if (!rows.length) return `<div class="results-meta">Sin resultados.</div>`;
+  const groups = {};
+  rows.forEach(b => {
+    const g = b[key] || "Sin clasificar";
+    (groups[g] = groups[g] || []).push(b);
+  });
+  const sortedKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,"es"));
+  return sortedKeys.map(g => `
+    <div class="group">
+      <h3>${escapeHtml(g)} <small>${groups[g].length} ${groups[g].length===1?"libro":"libros"}</small></h3>
+      <ul>
+        ${groups[g].sort((a,b)=>a.titulo.localeCompare(b.titulo,"es")).map(b => `
+          <li>
+            <div class="thumb">${thumbHtml(b)}</div>
+            <div class="info">
+              <div class="t">${escapeHtml(b.titulo)}</div>
+              <div class="meta" style="font-size:12px">${escapeHtml(b.autor)}${b.genero?" · "+escapeHtml(b.genero):""}${b.idioma?" · "+escapeHtml(b.idioma):""}</div>
+            </div>
+            <button class="ghost" data-edit="${escapeHtml(b.id)}" style="padding:6px 10px;font-size:12px">Editar</button>
+          </li>
+        `).join("")}
+      </ul>
+    </div>
+  `).join("");
+}
+
+function render() {
+  fillSelect("#genero", unique("genero"));
+  fillSelect("#autor", unique("autor"));
+  fillSelect("#idioma", unique("idioma"));
+  renderStats();
+  const filtered = applyFilters();
+  $("#meta").textContent = `${filtered.length} de ${books.length} libros`;
+  let html = "";
+  if (state.view === "cards")       html = renderCardsView(filtered);
+  else if (state.view === "autor")  html = renderGroupedView(filtered, "autor");
+  else if (state.view === "genero") html = renderGroupedView(filtered, "genero");
+  else if (state.view === "idioma") html = renderGroupedView(filtered, "idioma");
+  $("#content").innerHTML = html;
+
+  document.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.del;
+      const b = books.find(x => x.id === id);
+      if (!b) return;
+      if (!confirm(`¿Quitar "${b.titulo}" de la biblioteca?`)) return;
+      books = books.filter(x => x.id !== id);
+      saveBooks(books);
+      render();
+    });
+  });
+  document.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => openDialog(btn.dataset.edit));
+  });
+}
+
+/* ---- Filters ---- */
+$("#q").addEventListener("input", e => { state.q = e.target.value; render(); });
+$("#genero").addEventListener("change", e => { state.genero = e.target.value; render(); });
+$("#autor").addEventListener("change", e => { state.autor = e.target.value; render(); });
+$("#idioma").addEventListener("change", e => { state.idioma = e.target.value; render(); });
+
+document.querySelectorAll(".chip[data-view]").forEach(c => {
+  c.addEventListener("click", () => {
+    state.view = c.dataset.view;
+    document.querySelectorAll(".chip[data-view]").forEach(x => {
+      x.classList.toggle("active", x.dataset.view === state.view);
+    });
+    render();
+  });
+});
+
+/* ---- Add / Edit dialog ---- */
+function openDialog(editId) {
+  const dlg = $("#dlg");
+  const form = $("#addForm");
+  form.reset();
+  $("#imagenInput").value = "";
+  $("#preview").innerHTML = "Sin imagen";
+  if (editId) {
+    const b = books.find(x => x.id === editId);
+    if (!b) return;
+    $("#dlgTitle").textContent = "Editar libro";
+    form.id.value = b.id;
+    form.titulo.value = b.titulo || "";
+    form.autor.value = b.autor || "";
+    form.genero.value = b.genero || "";
+    form.idioma.value = b.idioma || "Español";
+    if (b.imagen) {
+      $("#imagenInput").value = b.imagen;
+      $("#preview").innerHTML = `<img src="${escapeHtml(b.imagen)}" />`;
+    }
+  } else {
+    $("#dlgTitle").textContent = "Añadir libro";
+    form.id.value = "";
+  }
+  dlg.showModal();
+}
+$("#addBtn").addEventListener("click", () => openDialog(null));
+$("#cancelBtn").addEventListener("click", () => $("#dlg").close());
+$("#clearImg").addEventListener("click", () => {
+  $("#imagenInput").value = "";
+  $("#imageFile").value = "";
+  $("#preview").innerHTML = "Sin imagen";
+});
+
+/* Resize uploaded image to a max dimension and save as JPEG dataURL,
+   so localStorage doesn't blow up on big phone photos. */
+function resizeImageToDataUrl(file, maxDim = 600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        const scale = Math.min(1, maxDim / Math.max(width, height));
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+$("#imageFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const dataUrl = await resizeImageToDataUrl(file);
+    $("#imagenInput").value = dataUrl;
+    $("#preview").innerHTML = `<img src="${dataUrl}" />`;
+  } catch (err) {
+    alert("No se pudo procesar la imagen.");
+  }
+});
+
+$("#addForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const id = fd.get("id");
+  const data = {
+    titulo: fd.get("titulo").trim(),
+    autor:  fd.get("autor").trim(),
+    genero: (fd.get("genero")||"").trim(),
+    idioma: fd.get("idioma") || "Español",
+    imagen: $("#imagenInput").value || "",
+  };
+  if (id) {
+    const idx = books.findIndex(b => b.id === id);
+    if (idx >= 0) books[idx] = { id, ...data };
+  } else {
+    books.push({ id: uid(), ...data });
+  }
+  saveBooks(books);
+  $("#dlg").close();
+  render();
+});
+
+/* ---- Export / reset ---- */
+$("#exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(books, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "biblioteca-jaime-elgueta.json";
+  a.click(); URL.revokeObjectURL(url);
+});
+$("#resetBtn").addEventListener("click", () => {
+  if (!confirm("¿Restaurar el catálogo original? Se perderán los libros, portadas y cambios añadidos.")) return;
+  books = SEED.slice();
+  saveBooks(books);
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
