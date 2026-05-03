@@ -65,7 +65,7 @@
 
   .toolbar {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 0.9fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 0.9fr;
     gap: 10px;
     margin-bottom: 14px;
   }
@@ -229,6 +229,50 @@
   .field-label { font-size: 12px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 1px; }
 
   footer { margin-top: 28px; color: var(--ink-dim); font-size: 12px; text-align: center; }
+
+  /* Star rating */
+  .stars { display: inline-flex; gap: 2px; user-select: none; }
+  .stars .star {
+    cursor: pointer;
+    color: #5a4632;
+    font-size: 16px;
+    line-height: 1;
+    transition: color .12s, transform .12s;
+  }
+  .stars .star.filled { color: var(--accent); }
+  .stars.readonly .star { cursor: default; }
+  .stars.large .star { font-size: 28px; }
+  .stars .star:hover { transform: scale(1.15); }
+
+  .card .rating { padding: 0 12px 4px; min-height: 18px; }
+  .card .clickable { cursor: pointer; }
+  .group li .rating { font-size: 12px; }
+
+  /* Detail modal */
+  dialog#detailDlg {
+    max-width: 640px; padding: 0;
+    background: var(--panel);
+    border-radius: var(--radius);
+  }
+  .detail-wrap { display: grid; grid-template-columns: 200px 1fr; gap: 18px; padding: 20px; }
+  @media (max-width: 600px) { .detail-wrap { grid-template-columns: 1fr; } }
+  .detail-cover {
+    width: 100%; aspect-ratio: 2/3;
+    border-radius: 8px; overflow: hidden;
+    background: linear-gradient(135deg, #4a2f1c 0%, #2b1d12 60%, #3a2718 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-family: var(--serif); font-size: 16px;
+    text-align: center; padding: 16px;
+  }
+  .detail-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .detail-info h2 { font-family: var(--serif); margin: 0 0 4px; font-size: 22px; color: var(--ink); }
+  .detail-info .author { color: var(--ink-dim); margin: 0 0 8px; font-size: 14px; }
+  .detail-info .meta { color: var(--ink-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .detail-rating-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .detail-rating-row .lbl { color: var(--ink-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .detail-synopsis { color: var(--ink); font-size: 14px; line-height: 1.55; max-height: 280px; overflow-y: auto; padding-right: 6px; }
+  .detail-synopsis.loading { color: var(--ink-dim); font-style: italic; }
+  .detail-actions { display: flex; gap: 8px; justify-content: flex-end; padding: 0 20px 20px; }
 </style>
 </head>
 <body>
@@ -245,6 +289,15 @@
     <select id="genero"><option value="">Todos los géneros</option></select>
     <select id="autor"><option value="">Todos los autores</option></select>
     <select id="idioma"><option value="">Todos los idiomas</option></select>
+    <select id="rating">
+      <option value="">Cualquier rating</option>
+      <option value="5">★★★★★ (5)</option>
+      <option value="4">★★★★ o más</option>
+      <option value="3">★★★ o más</option>
+      <option value="2">★★ o más</option>
+      <option value="1">★ o más</option>
+      <option value="0">Sin calificar</option>
+    </select>
     <button id="addBtn">+ Añadir libro</button>
   </div>
 
@@ -267,6 +320,26 @@
     Catálogo construido a partir de fotografías de la biblioteca. Tus añadidos, portadas y cambios se guardan localmente en este navegador.
   </footer>
 </main>
+
+<dialog id="detailDlg">
+  <div class="detail-wrap">
+    <div class="detail-cover" id="detailCover"></div>
+    <div class="detail-info">
+      <h2 id="detailTitle"></h2>
+      <p class="author" id="detailAuthor"></p>
+      <p class="meta" id="detailMeta"></p>
+      <div class="detail-rating-row">
+        <span class="lbl">Tu rating:</span>
+        <div class="stars large" id="detailStars"></div>
+      </div>
+      <div class="detail-synopsis loading" id="detailSynopsis">Cargando reseña…</div>
+    </div>
+  </div>
+  <div class="detail-actions">
+    <button class="ghost" id="detailEdit">Editar</button>
+    <button id="detailClose">Cerrar</button>
+  </div>
+</dialog>
 
 <dialog id="dlg">
   <h2 id="dlgTitle">Añadir libro</h2>
@@ -335,11 +408,18 @@ function saveBooks(b) {
 }
 
 let books = loadBooks();
-let state = { q: "", genero: "", autor: "", idioma: "", view: "cards" };
+// Backfill rating field for older saved data
+books.forEach(b => { if (typeof b.rating !== "number") b.rating = 0; });
+let state = { q: "", genero: "", autor: "", idioma: "", rating: "", view: "cards" };
 let coverCache = {};
+let synopsisCache = {};
 try { coverCache = JSON.parse(localStorage.getItem(COVER_CACHE_KEY) || "{}"); } catch (e) {}
+try { synopsisCache = JSON.parse(localStorage.getItem("biblioteca-synopsis-cache-v1") || "{}"); } catch (e) {}
 function saveCoverCache() {
   try { localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(coverCache)); } catch (e) {}
+}
+function saveSynopsisCache() {
+  try { localStorage.setItem("biblioteca-synopsis-cache-v1", JSON.stringify(synopsisCache)); } catch (e) {}
 }
 
 const $ = (s) => document.querySelector(s);
@@ -379,6 +459,118 @@ async function fetchCover(b) {
   saveCoverCache();
   return url;
 }
+
+async function fetchSynopsis(b) {
+  const k = bookKey(b);
+  if (k in synopsisCache) return synopsisCache[k];
+  let text = "";
+  let coverFromGoogle = "";
+  try {
+    const q = encodeURIComponent(`intitle:${b.titulo} inauthor:${b.autor}`);
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    if (r.ok) {
+      const data = await r.json();
+      const vol = data.items && data.items[0] && data.items[0].volumeInfo;
+      if (vol) {
+        text = vol.description || "";
+        coverFromGoogle = (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail) || "")
+                            .replace(/^http:\/\//, "https://").replace("&edge=curl", "");
+      }
+    }
+  } catch (e) {}
+  if (!text) {
+    try {
+      const sr = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(b.titulo)}&author=${encodeURIComponent(b.autor)}&limit=1`);
+      if (sr.ok) {
+        const sd = await sr.json();
+        const work = sd.docs && sd.docs[0];
+        if (work && work.key) {
+          const wr = await fetch(`https://openlibrary.org${work.key}.json`);
+          if (wr.ok) {
+            const wd = await wr.json();
+            const desc = wd.description;
+            text = (typeof desc === "string") ? desc : (desc && desc.value) || "";
+          }
+        }
+      }
+    } catch (e) {}
+  }
+  if (text && text.length > 1200) text = text.slice(0, 1200) + "…";
+  synopsisCache[k] = text;
+  saveSynopsisCache();
+  if (coverFromGoogle && !coverCache[k]) {
+    coverCache[k] = coverFromGoogle;
+    saveCoverCache();
+  }
+  return text;
+}
+
+let detailCurrentId = null;
+function openDetail(id) {
+  const b = books.find(x => x.id === id);
+  if (!b) return;
+  detailCurrentId = id;
+  $("#detailTitle").textContent = b.titulo;
+  $("#detailAuthor").textContent = b.autor;
+  const metaParts = [];
+  if (b.genero) metaParts.push(b.genero);
+  if (b.idioma) metaParts.push(b.idioma);
+  $("#detailMeta").textContent = metaParts.join(" · ");
+  const cover = $("#detailCover");
+  if (b.imagen) {
+    cover.innerHTML = `<img src="${escapeHtml(b.imagen)}" alt="" />`;
+  } else if (coverCache[bookKey(b)]) {
+    cover.innerHTML = `<img src="${escapeHtml(coverCache[bookKey(b)])}" alt="" onerror="this.outerHTML='<span>${escapeHtml(b.titulo)}</span>'" />`;
+  } else {
+    cover.innerHTML = `<span>${escapeHtml(b.titulo)}</span>`;
+  }
+  const stars = $("#detailStars");
+  stars.innerHTML = "";
+  for (let i = 1; i <= 5; i++) {
+    const s = document.createElement("span");
+    s.className = "star" + (i <= (b.rating||0) ? " filled" : "");
+    s.dataset.val = i;
+    s.textContent = "★";
+    s.addEventListener("click", () => {
+      b.rating = (b.rating === i) ? 0 : i;
+      saveBooks(books);
+      stars.querySelectorAll(".star").forEach(x => {
+        x.classList.toggle("filled", parseInt(x.dataset.val,10) <= (b.rating||0));
+      });
+      render();
+    });
+    stars.appendChild(s);
+  }
+  const synopsisEl = $("#detailSynopsis");
+  if (synopsisCache[bookKey(b)]) {
+    const t = synopsisCache[bookKey(b)];
+    synopsisEl.classList.remove("loading");
+    synopsisEl.textContent = t || "Sin reseña disponible para este libro.";
+  } else {
+    synopsisEl.classList.add("loading");
+    synopsisEl.textContent = "Cargando reseña…";
+    fetchSynopsis(b).then(t => {
+      if (detailCurrentId !== id) return;
+      synopsisEl.classList.remove("loading");
+      synopsisEl.textContent = t || "Sin reseña disponible para este libro.";
+      // Cover may have been fetched as a side effect — refresh if still in detail
+      if (!b.imagen && coverCache[bookKey(b)] && cover.querySelector("span")) {
+        cover.innerHTML = `<img src="${escapeHtml(coverCache[bookKey(b)])}" alt="" />`;
+      }
+    });
+  }
+  $("#detailDlg").showModal();
+}
+
+$("#detailClose").addEventListener("click", () => $("#detailDlg").close());
+$("#detailEdit").addEventListener("click", () => {
+  const id = detailCurrentId;
+  $("#detailDlg").close();
+  if (id) openDialog(id);
+});
+$("#detailDlg").addEventListener("click", (e) => {
+  if (e.target.id === "detailDlg") $("#detailDlg").close();
+});
 
 let coverLoadToken = 0;
 async function loadPendingCovers() {
@@ -433,12 +625,30 @@ function applyFilters() {
     if (state.genero && b.genero !== state.genero) return false;
     if (state.autor && b.autor !== state.autor) return false;
     if (state.idioma && b.idioma !== state.idioma) return false;
+    if (state.rating !== "") {
+      const r = b.rating || 0;
+      const wanted = parseInt(state.rating, 10);
+      if (wanted === 5 && r !== 5) return false;
+      if (wanted === 0 && r !== 0) return false;
+      if (wanted >= 1 && wanted <= 4 && r < wanted) return false;
+    }
     if (q) {
       const hay = norm(b.titulo) + " " + norm(b.autor) + " " + norm(b.genero);
       if (!hay.includes(q)) return false;
     }
     return true;
   });
+}
+
+function starsHtml(rating, opts) {
+  opts = opts || {};
+  const r = rating || 0;
+  let out = `<div class="stars${opts.large?" large":""}${opts.readonly?" readonly":""}"${opts.bookId?` data-rating-for="${escapeHtml(opts.bookId)}"`:""}>`;
+  for (let i = 1; i <= 5; i++) {
+    out += `<span class="star${i<=r?" filled":""}" data-val="${i}">★</span>`;
+  }
+  out += `</div>`;
+  return out;
 }
 
 function renderStats() {
@@ -478,12 +688,13 @@ function renderCardsView(rows) {
   rows = rows.slice().sort((a,b)=>a.titulo.localeCompare(b.titulo,"es"));
   return `<div class="cards">${rows.map(b => `
     <div class="card">
-      <div class="cover">${coverHtml(b)}</div>
-      <div class="body">
+      <div class="cover clickable" data-detail="${escapeHtml(b.id)}">${coverHtml(b)}</div>
+      <div class="body clickable" data-detail="${escapeHtml(b.id)}">
         <div class="titulo">${escapeHtml(b.titulo)}</div>
         <div class="autor">${escapeHtml(b.autor)}</div>
         <div class="meta">${escapeHtml(b.genero||"—")}${b.idioma?" · "+escapeHtml(b.idioma):""}</div>
       </div>
+      <div class="rating">${starsHtml(b.rating, { bookId: b.id })}</div>
       <div class="actions">
         <button data-edit="${escapeHtml(b.id)}">Editar</button>
         <button class="del" data-del="${escapeHtml(b.id)}">Quitar</button>
@@ -505,13 +716,13 @@ function renderGroupedView(rows, key) {
       <h3>${escapeHtml(g)} <small>${groups[g].length} ${groups[g].length===1?"libro":"libros"}</small></h3>
       <ul>
         ${groups[g].sort((a,b)=>a.titulo.localeCompare(b.titulo,"es")).map(b => `
-          <li>
+          <li class="clickable" data-detail="${escapeHtml(b.id)}">
             <div class="thumb">${thumbHtml(b)}</div>
             <div class="info">
               <div class="t">${escapeHtml(b.titulo)}</div>
               <div class="meta" style="font-size:12px">${escapeHtml(b.autor)}${b.genero?" · "+escapeHtml(b.genero):""}${b.idioma?" · "+escapeHtml(b.idioma):""}</div>
+              <div class="rating">${starsHtml(b.rating, { readonly: true })}</div>
             </div>
-            <button class="ghost" data-edit="${escapeHtml(b.id)}" style="padding:6px 10px;font-size:12px">Editar</button>
           </li>
         `).join("")}
       </ul>
@@ -545,7 +756,30 @@ function render() {
     });
   });
   document.querySelectorAll("[data-edit]").forEach(btn => {
-    btn.addEventListener("click", () => openDialog(btn.dataset.edit));
+    btn.addEventListener("click", (e) => { e.stopPropagation(); openDialog(btn.dataset.edit); });
+  });
+  document.querySelectorAll("[data-detail]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("button") || e.target.closest(".stars")) return;
+      openDetail(el.dataset.detail);
+    });
+  });
+  document.querySelectorAll(".stars[data-rating-for]").forEach(starsEl => {
+    const id = starsEl.dataset.ratingFor;
+    starsEl.querySelectorAll(".star").forEach(star => {
+      star.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const val = parseInt(star.dataset.val, 10);
+        const book = books.find(b => b.id === id);
+        if (!book) return;
+        book.rating = (book.rating === val) ? 0 : val;
+        saveBooks(books);
+        starsEl.querySelectorAll(".star").forEach(s => {
+          s.classList.toggle("filled", parseInt(s.dataset.val,10) <= (book.rating||0));
+        });
+        renderStats();
+      });
+    });
   });
   loadPendingCovers();
 }
@@ -555,6 +789,7 @@ $("#q").addEventListener("input", e => { state.q = e.target.value; render(); });
 $("#genero").addEventListener("change", e => { state.genero = e.target.value; render(); });
 $("#autor").addEventListener("change", e => { state.autor = e.target.value; render(); });
 $("#idioma").addEventListener("change", e => { state.idioma = e.target.value; render(); });
+$("#rating").addEventListener("change", e => { state.rating = e.target.value; render(); });
 
 document.querySelectorAll(".chip[data-view]").forEach(c => {
   c.addEventListener("click", () => {
@@ -651,9 +886,9 @@ $("#addForm").addEventListener("submit", e => {
   };
   if (id) {
     const idx = books.findIndex(b => b.id === id);
-    if (idx >= 0) books[idx] = { id, ...data };
+    if (idx >= 0) books[idx] = { ...books[idx], id, ...data };
   } else {
-    books.push({ id: uid(), ...data });
+    books.push({ id: uid(), rating: 0, ...data });
   }
   saveBooks(books);
   $("#dlg").close();
