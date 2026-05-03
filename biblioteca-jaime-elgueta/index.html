@@ -316,6 +316,7 @@
 
 <script>
 const STORAGE_KEY = "biblioteca-jaime-elgueta-v2";
+const COVER_CACHE_KEY = "biblioteca-cover-cache-v1";
 const SEED_RAW = JSON.parse(document.getElementById("seed-data").textContent);
 const SEED = SEED_RAW.map((b, i) => ({ id: "seed-" + i, ...b, imagen: "" }));
 
@@ -335,10 +336,82 @@ function saveBooks(b) {
 
 let books = loadBooks();
 let state = { q: "", genero: "", autor: "", idioma: "", view: "cards" };
+let coverCache = {};
+try { coverCache = JSON.parse(localStorage.getItem(COVER_CACHE_KEY) || "{}"); } catch (e) {}
+function saveCoverCache() {
+  try { localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(coverCache)); } catch (e) {}
+}
 
 const $ = (s) => document.querySelector(s);
 const norm = (s) => (s || "").toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const uid = () => "b-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+const bookKey = (b) => (b.titulo + "|" + b.autor).toLowerCase();
+
+/* Look up a cover from Google Books, then Open Library as fallback.
+   Caches result (including empty string for "not found") in localStorage. */
+async function fetchCover(b) {
+  const k = bookKey(b);
+  if (k in coverCache) return coverCache[k];
+  let url = "";
+  try {
+    const q = encodeURIComponent(`intitle:${b.titulo} inauthor:${b.autor}`);
+    const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    if (r.ok) {
+      const data = await r.json();
+      url = (data.items && data.items[0] && data.items[0].volumeInfo &&
+             data.items[0].volumeInfo.imageLinks &&
+             (data.items[0].volumeInfo.imageLinks.thumbnail ||
+              data.items[0].volumeInfo.imageLinks.smallThumbnail)) || "";
+      if (url) url = url.replace(/^http:\/\//, "https://").replace("&edge=curl", "");
+    }
+  } catch (e) {}
+  if (!url) {
+    try {
+      const r = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(b.titulo)}&author=${encodeURIComponent(b.autor)}&limit=1`);
+      if (r.ok) {
+        const data = await r.json();
+        const id = data.docs && data.docs[0] && data.docs[0].cover_i;
+        if (id) url = `https://covers.openlibrary.org/b/id/${id}-M.jpg`;
+      }
+    } catch (e) {}
+  }
+  coverCache[k] = url;
+  saveCoverCache();
+  return url;
+}
+
+let coverLoadToken = 0;
+async function loadPendingCovers() {
+  const myToken = ++coverLoadToken;
+  const pending = [];
+  const seen = new Set();
+  document.querySelectorAll("[data-cover-pending]").forEach(el => {
+    const id = el.dataset.coverPending;
+    if (seen.has(id)) return;
+    seen.add(id);
+    const book = books.find(x => x.id === id);
+    if (book) pending.push(book);
+  });
+  const CONCURRENCY = 6;
+  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    if (myToken !== coverLoadToken) return;
+    await Promise.all(pending.slice(i, i + CONCURRENCY).map(async (book) => {
+      const url = await fetchCover(book);
+      if (myToken !== coverLoadToken || !url) return;
+      document.querySelectorAll(`[data-cover-pending="${CSS.escape(book.id)}"]`).forEach(holder => {
+        const parent = holder.parentNode;
+        if (!parent) return;
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = book.titulo;
+        img.onerror = () => { parent.innerHTML = `<span>${escapeHtml(book.titulo)}</span>`; };
+        parent.innerHTML = "";
+        parent.appendChild(img);
+      });
+    }));
+  }
+  renderStats();
+}
 
 function unique(field) {
   return [...new Set(books.map(b => b[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));
@@ -373,7 +446,11 @@ function renderStats() {
   const autores = new Set(books.map(b => b.autor)).size;
   const generos = new Set(books.map(b => b.genero)).size;
   const idiomas = new Set(books.map(b => b.idioma)).size;
-  const conPortada = books.filter(b => b.imagen).length;
+  const conPortada = books.filter(b => {
+    if (b.imagen) return true;
+    const u = coverCache[bookKey(b)];
+    return !!u;
+  }).length;
   $("#stats").innerHTML = [
     ["Libros", total],
     ["Autores", autores],
@@ -385,11 +462,15 @@ function renderStats() {
 
 function coverHtml(b) {
   if (b.imagen) return `<img src="${escapeHtml(b.imagen)}" alt="${escapeHtml(b.titulo)}" />`;
-  return `<span>${escapeHtml(b.titulo)}</span>`;
+  const k = bookKey(b);
+  if (coverCache[k]) return `<img src="${escapeHtml(coverCache[k])}" alt="${escapeHtml(b.titulo)}" onerror="this.outerHTML='&lt;span&gt;'+this.alt+'&lt;/span&gt;'" />`;
+  return `<span data-cover-pending="${escapeHtml(b.id)}">${escapeHtml(b.titulo)}</span>`;
 }
 function thumbHtml(b) {
   if (b.imagen) return `<img src="${escapeHtml(b.imagen)}" alt="" />`;
-  return `<span>${escapeHtml((b.titulo||"").slice(0,18))}</span>`;
+  const k = bookKey(b);
+  if (coverCache[k]) return `<img src="${escapeHtml(coverCache[k])}" alt="" onerror="this.outerHTML='&lt;span&gt;'+this.parentNode.dataset.fallback+'&lt;/span&gt;'" />`;
+  return `<span data-cover-pending="${escapeHtml(b.id)}">${escapeHtml((b.titulo||"").slice(0,18))}</span>`;
 }
 
 function renderCardsView(rows) {
@@ -466,6 +547,7 @@ function render() {
   document.querySelectorAll("[data-edit]").forEach(btn => {
     btn.addEventListener("click", () => openDialog(btn.dataset.edit));
   });
+  loadPendingCovers();
 }
 
 /* ---- Filters ---- */
